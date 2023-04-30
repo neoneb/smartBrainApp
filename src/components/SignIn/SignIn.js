@@ -17,7 +17,7 @@ class SignIn extends React.Component {
     this.setState({ signInPassword: event.target.value });
   };
 
-  onSubmitSignIn = () => {
+  onSubmitSignIn = (attemptNum = 1) => {
     fetch('https://smart--brain-app.herokuapp.com/signin', {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
@@ -26,11 +26,31 @@ class SignIn extends React.Component {
         password: this.state.signInPassword,
       }),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          // If the response is not ok, retry after a delay
+          const delay = 1000; // Retry after 1 second
+          setTimeout(() => {
+            this.onSubmitSignIn(attemptNum + 1);
+          }, delay);
+          throw new Error(`Response not ok (attempt ${attemptNum}).`);
+        }
+        return response.json();
+      })
       .then((user) => {
         if (user.id) {
           this.props.loadUser(user);
           this.props.onRouteChange('home');
+        }
+      })
+      .catch((error) => {
+        const delay = 1000;
+        if (attemptNum <= 5) {
+          setTimeout(() => {
+            this.onSubmitSignIn(attemptNum + 1);
+          }, delay);
+        } else {
+          console.error(`Maximum number of retries reached: ${error}`);
         }
       });
   };

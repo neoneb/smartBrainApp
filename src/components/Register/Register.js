@@ -23,7 +23,7 @@ class Register extends React.Component {
     this.setState({ password: event.target.value });
   };
 
-  onSubmitSignIn = () => {
+  onSubmitSignIn = (attemptNum = 1) => {
     fetch('https://smart--brain-app.herokuapp.com/register', {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
@@ -33,11 +33,32 @@ class Register extends React.Component {
         password: this.state.password,
       }),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          const delay = 1000;
+          second;
+          setTimeout(() => {
+            this.onSubmitSignIn(attemptNum + 1);
+          }, delay);
+          throw new Error(`Response not ok (attempt ${attemptNum}).`);
+        }
+        return response.json();
+      })
       .then((user) => {
         if (user.id) {
           this.props.loadUser(user);
           this.props.onRouteChange('home');
+        }
+      })
+      .catch((error) => {
+        const delay = 1000;
+        second;
+        if (attemptNum <= 5) {
+          setTimeout(() => {
+            this.onSubmitSignIn(attemptNum + 1);
+          }, delay);
+        } else {
+          console.error(`Maximum number of retries reached: ${error}`);
         }
       });
   };
